@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, Circle } from "react-leaflet";
 import L from "leaflet";
 
@@ -49,9 +50,8 @@ export default function MapView({ zone, severity }: { zone: string; severity: st
           </Marker>
         ))}
         {alerts.map((a) => (
-          <>
+          <Fragment key={a.id}>
             <Circle
-              key={`h-${a.id}`}
               center={[a.lat, a.lng]}
               radius={a.severity === "Critical" ? 500 : a.severity === "High" ? 350 : 220}
               pathOptions={{
@@ -62,7 +62,6 @@ export default function MapView({ zone, severity }: { zone: string; severity: st
               }}
             />
             <CircleMarker
-              key={a.id}
               center={[a.lat, a.lng]}
               radius={7}
               pathOptions={{ color: sevColors[a.severity], fillColor: sevColors[a.severity], fillOpacity: 1 }}
@@ -74,7 +73,7 @@ export default function MapView({ zone, severity }: { zone: string; severity: st
                 <div className="text-xs">Est. loss: {a.estimatedLossLpm} L/min</div>
               </Popup>
             </CircleMarker>
-          </>
+          </Fragment>
         ))}
       </MapContainer>
     </div>
