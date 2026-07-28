@@ -572,6 +572,74 @@ function Dashboard() {
 
       {/* pipelines count reference for TS unused-var avoidance */}
       <div className="sr-only">{PIPELINES.length}</div>
+
+      <Dialog open={dispatchOpen} onOpenChange={setDispatchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dispatch crew</DialogTitle>
+            <DialogDescription>
+              Assign a field engineer to respond to an active leak alert.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Alert</Label>
+              <Select value={alertId} onValueChange={setAlertId}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Select alert" />
+                </SelectTrigger>
+                <SelectContent>
+                  {topAlertIds.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      [{a.severity}] {a.pipelineCode} · {a.location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Assign to</Label>
+              <Select value={crew} onValueChange={setCrew}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CREW.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Instructions for the field crew…"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setDispatchOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full gradient-primary text-white hover:opacity-95"
+              onClick={handleDispatch}
+            >
+              <Wrench className="mr-2 h-4 w-4" />
+              Confirm dispatch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
