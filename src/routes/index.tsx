@@ -25,10 +25,68 @@ import {
   Cell,
 } from "recharts";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageShell, StatusDot } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DAILY, LEAK_ALERTS, MAINTENANCE, PIPELINES, summary } from "@/lib/mock-data";
+
+const CREW = [
+  "Meera Iyer",
+  "Rahul Verma",
+  "Aisha Khan",
+  "Diego Alvarez",
+  "Priya Nair",
+];
+
+function buildAiReport(s: ReturnType<typeof summary>) {
+  const now = new Date();
+  const topAlerts = [...LEAK_ALERTS]
+    .sort((a, b) => +new Date(b.detectedAt) - +new Date(a.detectedAt))
+    .slice(0, 10);
+  const lines: string[] = [];
+  lines.push("AquaSense AI — Command Report");
+  lines.push(`Generated: ${now.toLocaleString()}`);
+  lines.push("".padEnd(48, "="));
+  lines.push("");
+  lines.push("Network summary");
+  lines.push(`  Pipelines monitored : ${s.monitored}`);
+  lines.push(`  Active leaks        : ${s.activeLeaks}`);
+  lines.push(`  High-risk pipelines : ${s.highRisk}`);
+  lines.push(`  Water saved today   : ${s.savedToday.toLocaleString()} L`);
+  lines.push(`  Water loss          : ${s.waterLossPct}%`);
+  lines.push("");
+  lines.push("Health distribution");
+  lines.push(`  Healthy  : ${s.distribution.healthy}`);
+  lines.push(`  Warning  : ${s.distribution.warning}`);
+  lines.push(`  Critical : ${s.distribution.critical}`);
+  lines.push("");
+  lines.push("Top 10 recent alerts");
+  topAlerts.forEach((a, i) => {
+    lines.push(
+      `  ${String(i + 1).padStart(2, "0")}. [${a.severity}] ${a.pipelineCode} · ${a.location} · ${a.estimatedLossLpm} L/min`,
+    );
+  });
+  return lines.join("\n");
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
