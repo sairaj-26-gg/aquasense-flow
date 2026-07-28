@@ -21,6 +21,13 @@ const pick = <T>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
 const between = (a: number, b: number) => a + rand() * (b - a);
 const DEMO_NOW = Date.UTC(2026, 6, 28, 9, 30, 0);
 
+function deterministicMaintenanceDate(risk: number) {
+  const daysAhead = Math.max(3, Math.round(120 - risk));
+  const d = new Date(DEMO_NOW);
+  d.setUTCDate(d.getUTCDate() + daysAhead);
+  return d.toISOString().slice(0, 10);
+}
+
 export const ZONES = [
   "North Sector",
   "East Sector",
@@ -91,7 +98,7 @@ function buildPipeline(i: number): Pipeline {
     lat: CENTER_LAT + between(-0.08, 0.08),
     lng: CENTER_LNG + between(-0.08, 0.08),
     failureProbability: failureProbability(risk),
-    predictedMaintenance: predictedMaintenanceDate(risk).toISOString().slice(0, 10),
+    predictedMaintenance: deterministicMaintenanceDate(risk),
     confidence: confidenceScore(200, Math.max(1, 100 - health)),
   };
 }
@@ -176,8 +183,8 @@ export const MAINTENANCE: MaintenanceTask[] = Array.from({ length: 50 }, (_, i) 
   const status = pick(["Pending", "In Progress", "Completed"] as const);
   const progress = status === "Completed" ? 100 : status === "In Progress" ? Math.floor(between(20, 90)) : 0;
   const daysAhead = Math.floor(between(-5, 21));
-  const d = new Date();
-  d.setDate(d.getDate() + daysAhead);
+  const d = new Date(DEMO_NOW);
+  d.setUTCDate(d.getUTCDate() + daysAhead);
   return {
     id: `task-${i + 1}`,
     title: pick([
