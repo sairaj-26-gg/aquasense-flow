@@ -230,17 +230,71 @@ function Dashboard() {
     .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
     .slice(0, 4);
 
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const topAlertIds = [...LEAK_ALERTS]
+    .sort((a, b) => +new Date(b.detectedAt) - +new Date(a.detectedAt))
+    .slice(0, 12);
+  const [alertId, setAlertId] = useState(topAlertIds[0]?.id ?? "");
+  const [crew, setCrew] = useState(CREW[0]);
+  const [notes, setNotes] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  const handleAiReport = async () => {
+    setGenerating(true);
+    const tid = toast.loading("Generating AI report…");
+    await new Promise((r) => setTimeout(r, 600));
+    try {
+      const content = buildAiReport(s);
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `aquasense-ai-report-${stamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("AI report downloaded", { id: tid });
+    } catch {
+      toast.error("Failed to generate report", { id: tid });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDispatch = () => {
+    const alert = LEAK_ALERTS.find((a) => a.id === alertId);
+    if (!alert) {
+      toast.error("Select an alert to dispatch");
+      return;
+    }
+    toast.success(`Crew dispatched: ${crew}`, {
+      description: `${alert.pipelineCode} · ${alert.location}${notes ? ` — ${notes}` : ""}`,
+    });
+    setDispatchOpen(false);
+    setNotes("");
+  };
+
   return (
     <PageShell
       title="Command dashboard"
       subtitle="Smart Water. Smarter Cities. Live network intelligence across every zone."
       actions={
         <>
-          <Button variant="outline" className="rounded-full">
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={handleAiReport}
+            disabled={generating}
+          >
             <Sparkles className="mr-2 h-4 w-4" />
-            AI Report
+            {generating ? "Generating…" : "AI Report"}
           </Button>
-          <Button className="rounded-full gradient-primary text-white hover:opacity-95">
+          <Button
+            className="rounded-full gradient-primary text-white hover:opacity-95"
+            onClick={() => setDispatchOpen(true)}
+          >
             <Wrench className="mr-2 h-4 w-4" />
             Dispatch crew
           </Button>
