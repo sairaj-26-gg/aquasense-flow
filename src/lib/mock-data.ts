@@ -3,7 +3,6 @@ import {
   healthScore,
   statusFromRisk,
   failureProbability,
-  predictedMaintenanceDate,
   confidenceScore,
 } from "./algorithms";
 
