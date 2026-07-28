@@ -11,6 +11,8 @@ import {
   Wrench,
   Sparkles,
   Bell,
+  Download,
+  CheckCircle2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -58,7 +60,7 @@ const CREW = [
 ];
 
 function buildAiReport(s: ReturnType<typeof summary>) {
-  const now = new Date();
+  const now = new Date("2026-07-28T09:30:00.000Z");
   const topAlerts = [...LEAK_ALERTS]
     .sort((a, b) => +new Date(b.detectedAt) - +new Date(a.detectedAt))
     .slice(0, 10);
@@ -86,6 +88,17 @@ function buildAiReport(s: ReturnType<typeof summary>) {
     );
   });
   return lines.join("\n");
+}
+
+function formatAlertTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 export const Route = createFileRoute("/")({
@@ -237,30 +250,37 @@ function Dashboard() {
   const [alertId, setAlertId] = useState(topAlertIds[0]?.id ?? "");
   const [crew, setCrew] = useState(CREW[0]);
   const [notes, setNotes] = useState("");
-  const [generating, setGenerating] = useState(false);
+  const [aiReportOpen, setAiReportOpen] = useState(false);
+  const [aiReportText, setAiReportText] = useState("");
+  const [lastDispatch, setLastDispatch] = useState<{
+    crew: string;
+    pipelineCode: string;
+    location: string;
+  } | null>(null);
 
-  const handleAiReport = async () => {
-    setGenerating(true);
-    const tid = toast.loading("Generating AI report…");
-    await new Promise((r) => setTimeout(r, 600));
+  const downloadAiReport = (content: string) => {
     try {
-      const content = buildAiReport(s);
       const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const stamp = new Date().toISOString().slice(0, 10);
+      const stamp = new Date("2026-07-28T09:30:00.000Z").toISOString().slice(0, 10);
       a.href = url;
       a.download = `aquasense-ai-report-${stamp}.txt`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("AI report downloaded", { id: tid });
+      toast.success("AI report downloaded");
     } catch {
-      toast.error("Failed to generate report", { id: tid });
-    } finally {
-      setGenerating(false);
+      toast.error("Failed to download report");
     }
+  };
+
+  const handleAiReport = () => {
+    const content = buildAiReport(s);
+    setAiReportText(content);
+    setAiReportOpen(true);
+    toast.success("AI report generated");
   };
 
   const handleDispatch = () => {
@@ -269,6 +289,7 @@ function Dashboard() {
       toast.error("Select an alert to dispatch");
       return;
     }
+    setLastDispatch({ crew, pipelineCode: alert.pipelineCode, location: alert.location });
     toast.success(`Crew dispatched: ${crew}`, {
       description: `${alert.pipelineCode} · ${alert.location}${notes ? ` — ${notes}` : ""}`,
     });
@@ -283,17 +304,21 @@ function Dashboard() {
       actions={
         <>
           <Button
+            type="button"
             variant="outline"
             className="rounded-full"
             onClick={handleAiReport}
-            disabled={generating}
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            {generating ? "Generating…" : "AI Report"}
+            AI Report
           </Button>
           <Button
+            type="button"
             className="rounded-full gradient-primary text-white hover:opacity-95"
-            onClick={() => setDispatchOpen(true)}
+            onClick={() => {
+              setAlertId((current) => current || topAlertIds[0]?.id || "");
+              setDispatchOpen(true);
+            }}
           >
             <Wrench className="mr-2 h-4 w-4" />
             Dispatch crew
@@ -441,7 +466,7 @@ function Dashboard() {
                     {a.pipelineCode} · {a.location}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(a.detectedAt).toLocaleString()} · est. loss{" "}
+                    {formatAlertTime(a.detectedAt)} · est. loss{" "}
                     {a.estimatedLossLpm} L/min
                   </div>
                 </div>
@@ -570,8 +595,59 @@ function Dashboard() {
         ))}
       </div>
 
+      {lastDispatch && (
+        <div className="mt-6 neo-card flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-health-good)]/15 text-[var(--color-health-good)]">
+              <CheckCircle2 className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="text-sm font-semibold">Dispatch confirmed</div>
+              <div className="text-xs text-muted-foreground">
+                {lastDispatch.crew} assigned to {lastDispatch.pipelineCode} · {lastDispatch.location}
+              </div>
+            </div>
+          </div>
+          <Badge className="w-fit rounded-full bg-primary/10 text-primary hover:bg-primary/15">
+            Crew en route
+          </Badge>
+        </div>
+      )}
+
       {/* pipelines count reference for TS unused-var avoidance */}
       <div className="sr-only">{PIPELINES.length}</div>
+
+      <Dialog open={aiReportOpen} onOpenChange={setAiReportOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI report</DialogTitle>
+            <DialogDescription>
+              Generated command summary for the current water network snapshot.
+            </DialogDescription>
+          </DialogHeader>
+          <pre className="max-h-[55vh] overflow-auto rounded-2xl bg-secondary/60 p-4 text-xs leading-relaxed text-foreground">
+            {aiReportText}
+          </pre>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setAiReportOpen(false)}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full gradient-primary text-white hover:opacity-95"
+              onClick={() => downloadAiReport(aiReportText)}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dispatchOpen} onOpenChange={setDispatchOpen}>
         <DialogContent className="sm:max-w-md">
@@ -624,6 +700,7 @@ function Dashboard() {
           </div>
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               className="rounded-full"
               onClick={() => setDispatchOpen(false)}
@@ -631,6 +708,7 @@ function Dashboard() {
               Cancel
             </Button>
             <Button
+              type="button"
               className="rounded-full gradient-primary text-white hover:opacity-95"
               onClick={handleDispatch}
             >

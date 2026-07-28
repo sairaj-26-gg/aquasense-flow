@@ -19,6 +19,7 @@ function mulberry32(seed: number) {
 const rand = mulberry32(42);
 const pick = <T>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
 const between = (a: number, b: number) => a + rand() * (b - a);
+const DEMO_NOW = Date.UTC(2026, 6, 28, 9, 30, 0);
 
 export const ZONES = [
   "North Sector",
@@ -126,7 +127,7 @@ export const LEAK_ALERTS: LeakAlert[] = Array.from({ length: 100 }, (_, i) => {
   const p = PIPELINES[Math.floor(rand() * PIPELINES.length)];
   const sev = pick(SEVERITIES);
   const minutesAgo = Math.floor(between(1, 60 * 24 * 3));
-  const d = new Date(Date.now() - minutesAgo * 60_000);
+  const d = new Date(DEMO_NOW - minutesAgo * 60_000);
   const loss = Math.round(between(3, 220));
   return {
     id: `alert-${i + 1}`,
@@ -205,7 +206,7 @@ export interface DailyPoint {
   leaks: number;
 }
 export const DAILY: DailyPoint[] = Array.from({ length: 30 }, (_, i) => {
-  const d = new Date();
+  const d = new Date(DEMO_NOW);
   d.setDate(d.getDate() - (29 - i));
   return {
     day: d.toLocaleDateString("en", { month: "short", day: "numeric" }),
@@ -222,7 +223,7 @@ export interface MonthlyPoint {
   leaks: number;
 }
 export const MONTHLY: MonthlyPoint[] = Array.from({ length: 12 }, (_, i) => {
-  const d = new Date();
+  const d = new Date(DEMO_NOW);
   d.setMonth(d.getMonth() - (11 - i));
   return {
     month: d.toLocaleDateString("en", { month: "short" }),
@@ -242,7 +243,7 @@ export interface SensorRecord {
 export const SENSOR_DATA: SensorRecord[] = Array.from({ length: 5000 }, (_, i) => {
   const p = PIPELINES[i % PIPELINES.length];
   return {
-    ts: Date.now() - i * 60_000,
+    ts: DEMO_NOW - i * 60_000,
     pipelineId: p.id,
     pressure: +between(2, 7).toFixed(2),
     flow: +between(100, 340).toFixed(1),
