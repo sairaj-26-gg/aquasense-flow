@@ -25,10 +25,68 @@ import {
   Cell,
 } from "recharts";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageShell, StatusDot } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DAILY, LEAK_ALERTS, MAINTENANCE, PIPELINES, summary } from "@/lib/mock-data";
+
+const CREW = [
+  "Meera Iyer",
+  "Rahul Verma",
+  "Aisha Khan",
+  "Diego Alvarez",
+  "Priya Nair",
+];
+
+function buildAiReport(s: ReturnType<typeof summary>) {
+  const now = new Date();
+  const topAlerts = [...LEAK_ALERTS]
+    .sort((a, b) => +new Date(b.detectedAt) - +new Date(a.detectedAt))
+    .slice(0, 10);
+  const lines: string[] = [];
+  lines.push("AquaSense AI — Command Report");
+  lines.push(`Generated: ${now.toLocaleString()}`);
+  lines.push("".padEnd(48, "="));
+  lines.push("");
+  lines.push("Network summary");
+  lines.push(`  Pipelines monitored : ${s.monitored}`);
+  lines.push(`  Active leaks        : ${s.activeLeaks}`);
+  lines.push(`  High-risk pipelines : ${s.highRisk}`);
+  lines.push(`  Water saved today   : ${s.savedToday.toLocaleString()} L`);
+  lines.push(`  Water loss          : ${s.waterLossPct}%`);
+  lines.push("");
+  lines.push("Health distribution");
+  lines.push(`  Healthy  : ${s.distribution.healthy}`);
+  lines.push(`  Warning  : ${s.distribution.warning}`);
+  lines.push(`  Critical : ${s.distribution.critical}`);
+  lines.push("");
+  lines.push("Top 10 recent alerts");
+  topAlerts.forEach((a, i) => {
+    lines.push(
+      `  ${String(i + 1).padStart(2, "0")}. [${a.severity}] ${a.pipelineCode} · ${a.location} · ${a.estimatedLossLpm} L/min`,
+    );
+  });
+  return lines.join("\n");
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -172,17 +230,71 @@ function Dashboard() {
     .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
     .slice(0, 4);
 
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const topAlertIds = [...LEAK_ALERTS]
+    .sort((a, b) => +new Date(b.detectedAt) - +new Date(a.detectedAt))
+    .slice(0, 12);
+  const [alertId, setAlertId] = useState(topAlertIds[0]?.id ?? "");
+  const [crew, setCrew] = useState(CREW[0]);
+  const [notes, setNotes] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  const handleAiReport = async () => {
+    setGenerating(true);
+    const tid = toast.loading("Generating AI report…");
+    await new Promise((r) => setTimeout(r, 600));
+    try {
+      const content = buildAiReport(s);
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `aquasense-ai-report-${stamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("AI report downloaded", { id: tid });
+    } catch {
+      toast.error("Failed to generate report", { id: tid });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDispatch = () => {
+    const alert = LEAK_ALERTS.find((a) => a.id === alertId);
+    if (!alert) {
+      toast.error("Select an alert to dispatch");
+      return;
+    }
+    toast.success(`Crew dispatched: ${crew}`, {
+      description: `${alert.pipelineCode} · ${alert.location}${notes ? ` — ${notes}` : ""}`,
+    });
+    setDispatchOpen(false);
+    setNotes("");
+  };
+
   return (
     <PageShell
       title="Command dashboard"
       subtitle="Smart Water. Smarter Cities. Live network intelligence across every zone."
       actions={
         <>
-          <Button variant="outline" className="rounded-full">
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={handleAiReport}
+            disabled={generating}
+          >
             <Sparkles className="mr-2 h-4 w-4" />
-            AI Report
+            {generating ? "Generating…" : "AI Report"}
           </Button>
-          <Button className="rounded-full gradient-primary text-white hover:opacity-95">
+          <Button
+            className="rounded-full gradient-primary text-white hover:opacity-95"
+            onClick={() => setDispatchOpen(true)}
+          >
             <Wrench className="mr-2 h-4 w-4" />
             Dispatch crew
           </Button>
@@ -460,6 +572,74 @@ function Dashboard() {
 
       {/* pipelines count reference for TS unused-var avoidance */}
       <div className="sr-only">{PIPELINES.length}</div>
+
+      <Dialog open={dispatchOpen} onOpenChange={setDispatchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dispatch crew</DialogTitle>
+            <DialogDescription>
+              Assign a field engineer to respond to an active leak alert.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Alert</Label>
+              <Select value={alertId} onValueChange={setAlertId}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Select alert" />
+                </SelectTrigger>
+                <SelectContent>
+                  {topAlertIds.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      [{a.severity}] {a.pipelineCode} · {a.location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Assign to</Label>
+              <Select value={crew} onValueChange={setCrew}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CREW.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Instructions for the field crew…"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setDispatchOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full gradient-primary text-white hover:opacity-95"
+              onClick={handleDispatch}
+            >
+              <Wrench className="mr-2 h-4 w-4" />
+              Confirm dispatch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
