@@ -109,10 +109,21 @@ function Profile() {
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" className="rounded-full">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setForm(user)}
+            >
               Cancel
             </Button>
-            <Button className="rounded-full gradient-primary text-white">Save changes</Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              className="rounded-full gradient-primary text-white"
+            >
+              Save changes
+            </Button>
           </div>
         </div>
       </div>
