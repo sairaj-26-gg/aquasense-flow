@@ -57,7 +57,7 @@ function Login() {
             <Link to="/login" className="hover:text-primary">
               Forgot password?
             </Link>
-            <Link to="/login" className="hover:text-primary">
+            <Link to="/signup" className="font-medium text-primary hover:underline">
               Create account
             </Link>
           </div>
