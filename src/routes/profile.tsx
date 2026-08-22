@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LogOut, Lock, Mail, Building2, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,13 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    toast.success("Signed out", { description: "You have been logged out of AquaSense AI." });
+    navigate({ to: "/login", replace: true });
+  };
+
   return (
     <PageShell title="Profile" subtitle="Manage your identity and preferences.">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -42,7 +50,12 @@ function Profile() {
             <Row icon={Shield} label="Role" value="Admin · Engineer" />
           </ul>
 
-          <Button variant="outline" className="mt-6 w-full rounded-full">
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-6 w-full rounded-full"
+            onClick={handleLogout}
+          >
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>
