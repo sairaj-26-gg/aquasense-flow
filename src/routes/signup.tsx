@@ -13,6 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { saveDemoUser } from "@/lib/demo-user";
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  engineer: "Engineer",
+  viewer: "Viewer",
+};
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -49,6 +56,11 @@ function Signup() {
       });
       return;
     }
+    saveDemoUser({
+      name: name.trim(),
+      email: email.trim(),
+      role: ROLE_LABELS[role] ?? "Engineer",
+    });
     toast.success("Account created", {
       description: `Welcome to AquaSense AI, ${name.split(" ")[0]}. Demo workspace ready.`,
     });

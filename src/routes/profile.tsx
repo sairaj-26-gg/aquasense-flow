@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { LogOut, Lock, Mail, Building2, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { clearDemoUser, initials, saveDemoUser, useDemoUser } from "@/lib/demo-user";
 
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
@@ -22,8 +24,25 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const navigate = useNavigate();
+  const user = useDemoUser();
+  const [form, setForm] = useState(user);
+
+  useEffect(() => setForm(user), [user]);
+
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleSave = () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      toast.error("Name and email are required");
+      return;
+    }
+    saveDemoUser({ ...form, name: form.name.trim(), email: form.email.trim() });
+    toast.success("Profile updated");
+  };
 
   const handleLogout = () => {
+    clearDemoUser();
     toast.success("Signed out", { description: "You have been logged out of AquaSense AI." });
     navigate({ to: "/login", replace: true });
   };
@@ -34,20 +53,23 @@ function Profile() {
         <div className="neo-card-lg p-6 lg:col-span-1">
           <div className="flex flex-col items-center text-center">
             <div className="flex h-24 w-24 items-center justify-center rounded-full gradient-primary text-2xl font-bold text-white shadow-[var(--shadow-glow)]">
-              AR
+              {initials(user.name)}
             </div>
-            <div className="mt-4 text-lg font-semibold">Aarav Rao</div>
-            <div className="text-sm text-muted-foreground">Senior Water Engineer</div>
+            <div className="mt-4 text-lg font-semibold">{user.name}</div>
+            <div className="text-sm text-muted-foreground">{user.department}</div>
             <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">Admin</span>
-              <span className="rounded-full bg-secondary px-3 py-1 text-muted-foreground">Engineer</span>
+              {user.role.split("·").map((r) => (
+                <span key={r} className="rounded-full bg-primary/10 px-3 py-1 text-primary">
+                  {r.trim()}
+                </span>
+              ))}
             </div>
           </div>
 
           <ul className="mt-6 space-y-3 text-sm">
-            <Row icon={Mail} label="Email" value="aarav@aquasense.ai" />
-            <Row icon={Building2} label="Department" value="Water Operations · Zone Central" />
-            <Row icon={Shield} label="Role" value="Admin · Engineer" />
+            <Row icon={Mail} label="Email" value={user.email} />
+            <Row icon={Building2} label="Department" value={user.department} />
+            <Row icon={Shield} label="Role" value={user.role} />
           </ul>
 
           <Button
@@ -63,10 +85,10 @@ function Profile() {
         <div className="neo-card-lg p-6 lg:col-span-2">
           <div className="mb-4 text-lg font-semibold">Account</div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Field label="Full name" defaultValue="Aarav Rao" />
-            <Field label="Email" type="email" defaultValue="aarav@aquasense.ai" />
-            <Field label="Department" defaultValue="Water Operations" />
-            <Field label="Phone" defaultValue="+91 90000 12345" />
+            <Field label="Full name" value={form.name} onChange={set("name")} />
+            <Field label="Email" type="email" value={form.email} onChange={set("email")} />
+            <Field label="Department" value={form.department} onChange={set("department")} />
+            <Field label="Phone" value={form.phone} onChange={set("phone")} />
           </div>
 
           <div className="mt-8 mb-4 flex items-center gap-2 text-lg font-semibold">
@@ -87,10 +109,21 @@ function Profile() {
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" className="rounded-full">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setForm(user)}
+            >
               Cancel
             </Button>
-            <Button className="rounded-full gradient-primary text-white">Save changes</Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              className="rounded-full gradient-primary text-white"
+            >
+              Save changes
+            </Button>
           </div>
         </div>
       </div>
