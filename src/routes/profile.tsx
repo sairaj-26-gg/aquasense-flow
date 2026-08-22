@@ -50,7 +50,12 @@ function Profile() {
             <Row icon={Shield} label="Role" value="Admin · Engineer" />
           </ul>
 
-          <Button variant="outline" className="mt-6 w-full rounded-full">
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-6 w-full rounded-full"
+            onClick={handleLogout}
+          >
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </div>
